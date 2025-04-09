@@ -59,7 +59,9 @@ class LIFXCeilingConfigFlow(ConfigFlow, domain=DOMAIN):
             discovery_info.hostname.removesuffix(".local.").lower()
         )
 
-        await self.async_set_unique_id(self.mac)
+        # Combine host and mac to make sure the unique id is truly unique
+        unique_id_value = f"{self.host}_{self.mac}"
+        await self.async_set_unique_id(unique_id_value)
         self._abort_if_unique_id_configured(updates={CONF_HOST: self.host})
 
         try:
@@ -92,7 +94,7 @@ class LIFXCeilingConfigFlow(ConfigFlow, domain=DOMAIN):
     def _async_show_setup_form(
         self, errors: dict[str, str] | None = None
     ) -> ConfigFlowResult:
-        """Show the steup form to the user."""
+        """Show the setup form to the user."""
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
@@ -105,7 +107,7 @@ class LIFXCeilingConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def _async_create_entry(self) -> ConfigFlowResult:
         """Create the config entry."""
-        self._abort_if_unique_id_configured(updates={CONF_HOST: self.host})
+        # Assuming async_set_unique_id was already called in _get_lifx_label.
         return self.async_create_entry(title=self.label, data={CONF_HOST: self.host})
 
     async def _get_lifx_label(self, raise_on_progress: bool = True) -> None:
@@ -118,9 +120,9 @@ class LIFXCeilingConfigFlow(ConfigFlow, domain=DOMAIN):
             if not is_ceiling:
                 raise LIFXCeilingError(INVALID_DEVICE)
 
-        await self.async_set_unique_id(
-            formatted_serial(conn.device.mac_addr), raise_on_progress=raise_on_progress
-        )
+        # Here we combine the host with the device MAC to ensure uniqueness.
+        unique_id_value = f"{self.host}_{formatted_serial(conn.device.mac_addr)}"
+        await self.async_set_unique_id(unique_id_value, raise_on_progress=raise_on_progress)
         self._abort_if_unique_id_configured(updates={CONF_HOST: self.host})
         self.label = conn.device.label
         self.group = conn.device.group
